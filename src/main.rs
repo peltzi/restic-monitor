@@ -9,7 +9,7 @@ fn main() {
         .name(env!("CARGO_PKG_NAME"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .version(env!("CARGO_PKG_VERSION"))
-        .command(cli::get_restic_latest_snapshots_cmd());
+        .command(cli::ensure_snapshots_age_cmd());
 
     app.run(args);
 }
