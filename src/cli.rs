@@ -1,15 +1,32 @@
+use ::std::process;
 use restic_monitor::restic::snapshots;
 use restic_monitor::restic::*;
 use seahorse::{Command, Context, Flag, FlagType};
 
-fn handle_ensure_snapshots_age(c: &Context) {
-    let repo = match c.string_flag("repo") {
-        Some(s) => s,
+// TODO: Implement struct to serialize as JSON return to user outputting the groups and whether
+// they have new enough snapshots or not
+
+fn require_sflag<'a>(c: &'a Context, f: &str) -> String {
+    require_flag(f, c.string_flag(f))
+}
+
+#[allow(dead_code)]
+fn require_iflag<'a>(c: &'a Context, f: &str) -> isize {
+    require_flag(f, c.int_flag(f))
+}
+
+fn require_flag<T>(f: &str, fv: Option<T>) -> T {
+    match fv {
+        Some(v) => v,
         None => {
-            eprintln!("You must give Restic repo string!");
-            std::process::exit(1)
+            eprintln!("Flag '{}' needs to be set!", f);
+            process::exit(1)
         }
-    };
+    }
+}
+
+fn handle_ensure_snapshots_age(c: &Context) {
+    let repo = require_sflag(&c, "repo").to_string();
 
     let group_by = match c.string_flag("group-by") {
         Some(s) => s,
@@ -27,7 +44,7 @@ fn handle_ensure_snapshots_age(c: &Context) {
         Ok(snapshots_by_group) => snapshots_by_group,
         Err(error) => {
             eprintln!("Error while listing snapshots: {:?}", error);
-            std::process::exit(1)
+            process::exit(1)
         }
     };
 
@@ -48,13 +65,13 @@ fn handle_ensure_snapshots_age(c: &Context) {
             "ERROR: Groups have snapshots older than {} hours!",
             older_hours
         );
-        std::process::exit(1)
+        process::exit(1)
     } else {
         println!(
             "OK: All groups have snaphots newer than {} hours!",
             older_hours
         );
-        std::process::exit(0)
+        process::exit(0)
     }
 }
 
