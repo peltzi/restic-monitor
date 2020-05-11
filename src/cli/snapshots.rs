@@ -1,32 +1,32 @@
+use crate::restic::snapshots;
+use crate::restic::*;
 use ::std::process;
-use restic_monitor::restic::snapshots;
-use restic_monitor::restic::*;
 use seahorse::{Command, Context, Flag, FlagType};
 
-// TODO: Implement struct to serialize as JSON return to user outputting the groups and whether
-// they have new enough snapshots or not
+use super::utils;
 
-fn require_sflag<'a>(c: &'a Context, f: &str) -> String {
-    require_flag(f, c.string_flag(f))
-}
-
-#[allow(dead_code)]
-fn require_iflag<'a>(c: &'a Context, f: &str) -> isize {
-    require_flag(f, c.int_flag(f))
-}
-
-fn require_flag<T>(f: &str, fv: Option<T>) -> T {
-    match fv {
-        Some(v) => v,
-        None => {
-            eprintln!("Flag '{}' needs to be set!", f);
-            process::exit(1)
-        }
-    }
+pub fn ensure_age_cmd() -> Command {
+    Command::new()
+        .name("ensure-snapshots-newer-than")
+        .action(handle_ensure_snapshots_age)
+        .flag(Flag::new("repo", "--repo [string]", FlagType::String).alias("r"))
+        .flag(
+            Flag::new(
+                "group-by",
+                "--group-by [field,field] (default: host)",
+                FlagType::String,
+            )
+            .alias("g"),
+        )
+        .flag(Flag::new(
+            "newer-than",
+            "--newer-than [hours] (default: 24)",
+            FlagType::Int,
+        ))
 }
 
 fn handle_ensure_snapshots_age(c: &Context) {
-    let repo = require_sflag(&c, "repo").to_string();
+    let repo = utils::require_sflag(&c, "repo").to_string();
 
     let group_by = match c.string_flag("group-by") {
         Some(s) => s,
@@ -73,24 +73,4 @@ fn handle_ensure_snapshots_age(c: &Context) {
         );
         process::exit(0)
     }
-}
-
-pub fn ensure_snapshots_age_cmd() -> Command {
-    Command::new()
-        .name("ensure-snapshots-newer-than")
-        .action(handle_ensure_snapshots_age)
-        .flag(Flag::new("repo", "--repo [string]", FlagType::String).alias("r"))
-        .flag(
-            Flag::new(
-                "group-by",
-                "--group-by [field,field] (default: host)",
-                FlagType::String,
-            )
-            .alias("g"),
-        )
-        .flag(Flag::new(
-            "newer-than",
-            "--newer-than [hours] (default: 24)",
-            FlagType::Int,
-        ))
 }

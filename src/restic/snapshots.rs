@@ -2,7 +2,6 @@ use chrono::{DateTime, Duration, FixedOffset, Local};
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
-use std::process::Command as SysCommand;
 
 #[derive(Debug, Deserialize)]
 pub struct Snapshot {
@@ -62,17 +61,10 @@ impl Group {
 }
 
 pub fn get_by_group(repo: &str, group_by: &str) -> Result<Vec<Group>, Box<dyn Error>> {
-    let output = SysCommand::new("/usr/bin/restic")
-        .args(&["-r", repo, "snapshots", "--json", "--group-by", group_by])
-        .output()?;
-
-    if !output.status.success() {
-        let output_stderr = String::from_utf8(output.stderr)?;
-        eprintln!("Stderr: {:?}", output_stderr);
-        Err("Bad return code from Restic. See stderr above.")?;
-    }
-
-    let output_string = String::from_utf8(output.stdout)?;
+    let output_string = String::from_utf8(super::run(
+        None,
+        &["-r", repo, "snapshots", "--json", "--group-by", group_by],
+    )?)?;
     let groups: Vec<Group> = serde_json::from_str(&output_string)?;
 
     Ok(groups)
