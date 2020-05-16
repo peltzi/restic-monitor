@@ -1,9 +1,9 @@
 use chrono::{DateTime, Duration, FixedOffset, Local};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::error::Error;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Snapshot {
     pub time: DateTime<FixedOffset>,
     pub hostname: String,
@@ -12,13 +12,17 @@ pub struct Snapshot {
     pub paths: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Group {
     pub group_key: Value,
     pub snapshots: Vec<Snapshot>,
 }
 
 impl Group {
+    pub fn sort_snapshots_by_datetime(&mut self) {
+        self.snapshots.sort_unstable_by(|a, b| b.time.cmp(&a.time));
+    }
+
     pub fn latest_snapshot(&mut self) -> Option<&Snapshot> {
         if self.snapshots.is_empty() {
             return None;
@@ -26,10 +30,6 @@ impl Group {
 
         self.sort_snapshots_by_datetime();
         Some(&self.snapshots[0])
-    }
-
-    pub fn sort_snapshots_by_datetime(&mut self) {
-        self.snapshots.sort_unstable_by(|a, b| b.time.cmp(&a.time));
     }
 
     pub fn latest_snapshot_older_than(&mut self, older_hours: &i64) -> bool {
@@ -43,16 +43,8 @@ impl Group {
             Some(dt) => dt,
             None => return true,
         };
-        println!("Old time: {}", old_time);
-        println!(
-            "Local time with snapshot timezone: {:?}",
-            local_time
-                .with_timezone(&latest_snapshot.time.timezone())
-                .to_rfc3339()
-        );
 
         if latest_snapshot.time < old_time {
-            println!("Snapshot older than limit");
             return true;
         } else {
             return false;
